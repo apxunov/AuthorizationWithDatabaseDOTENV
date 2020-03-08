@@ -36,7 +36,8 @@ const userSchema = new mongoose.Schema ({
         type: String,
         // required: [true, "this field needs to be filled"],
     },
-    googleId: String
+    googleId: String,
+    secret: String
 });
 userSchema.plugin(passportLocalMongoose);
 userSchema.plugin(findOrCreate);
@@ -91,8 +92,19 @@ app.get('/google/auth/secrets',
     res.redirect('/secrets');
 });
 app.get('/secrets', function(req, res){
+    User.find({"secret": { $exists: true } }, function (err, foundUsers) {
+        if (err) {
+            console.log(err);
+        } else {
+            if (foundUsers) {
+                res.render('secrets', {usersWithSecrets: foundUsers});
+            }
+        }
+    });
+});
+app.get('/submit', function (req, res) {
     if (req.isAuthenticated()){
-        res.render('secrets');
+        res.render('submit');
     } else {
         res.redirect('/login');
     }
@@ -137,6 +149,20 @@ app.post('/login', function(req, res){
     });
 });
 
+// save the secret to an actual user 
+app.post('/submit', function (req, res) {
+    const submittedSecret = req.body.secret;
+    User.findById(req.user._id, function (err, foundUser) {
+        if (err){
+            console.log(err)
+        } else {
+            if (foundUser) {
+                foundUser.secret = submittedSecret;
+                foundUser.save( () => res.redirect('/secrets'));
+            }
+        }
+    });
+});
 
 
 
